@@ -1,0 +1,11 @@
+# Default ignored files
+**/.classpath
+**/.project
+**/.factorypath
+
+**/.settings/
+**/.vscode/
+**/target/
+
+**/.idea/
+**/*iml
