@@ -35,6 +35,11 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.13</version>
+            </dependency>
+            <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>8.0.17</version>
@@ -46,8 +51,8 @@
             </dependency>
             <dependency>
                 <groupId>org.activiti</groupId>
-                <artifactId>activiti-spring-boot-starter</artifactId>
-                <version>7.1.0.M6</version>
+                <artifactId>activiti-spring-boot-starter-basic</artifactId>
+                <version>6.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.miaojiaosan.activiti</groupId>

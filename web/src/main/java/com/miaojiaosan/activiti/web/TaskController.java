@@ -23,6 +23,12 @@ public class TaskController {
     return task.list(assignee);
   }
 
+  @GetMapping("/{taskId}/{assignee}")
+  public Boolean claim(@PathVariable String taskId, @PathVariable String assignee){
+    return task.claim(taskId, assignee);
+  }
+
+
 
   @PostMapping
   public Boolean complete(@RequestBody  TaskComplete complete){

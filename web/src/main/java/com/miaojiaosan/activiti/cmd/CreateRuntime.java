@@ -4,7 +4,7 @@ public class CreateRuntime {
 
   String key;
 
-  String users;
+  String user;
 
   public String getKey() {
     return key;
@@ -14,11 +14,11 @@ public class CreateRuntime {
     this.key = key;
   }
 
-  public String getUsers() {
-    return users;
+  public String getUser() {
+    return user;
   }
 
-  public void setUsers(String users) {
-    this.users = users;
+  public void setUser(String user) {
+    this.user = user;
   }
 }
