@@ -43,6 +43,7 @@ public class OrganizationManager extends Approval {
 		userTask.setAssignee(
 			"${customExpress.leader(startUser, " + this.level + "," + this.whenOrgNotExists + ")}"
 		);
+		noCountersign(userTask);
 		return userTask;
 	}
 }

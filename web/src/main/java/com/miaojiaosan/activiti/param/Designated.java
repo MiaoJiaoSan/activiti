@@ -1,11 +1,11 @@
 package com.miaojiaosan.activiti.param;
 
-import org.activiti.bpmn.model.FlowElement;
-import org.activiti.bpmn.model.MultiInstanceLoopCharacteristics;
+import org.activiti.bpmn.model.*;
 import org.activiti.bpmn.model.UserTask;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -85,20 +85,23 @@ public class Designated extends Approval {
 			List<String> candidateGroups = userTask.getCandidateGroups();
 			candidateGroups.addAll(roles.stream()
 				.map(roleId -> "role:" + roleId).collect(Collectors.toList()));
-
+			noCountersign(userTask);
 		}else if(countersign == 2){
 			userTask.setAssignee("${assignee}");
 			MultiInstanceLoopCharacteristics multiInstance
 				= new MultiInstanceLoopCharacteristics();
-			multiInstance.setLoopCardinality(String.valueOf(users.size()));
 			String users = StringUtils.join(this.users.toArray(), ",");
 			multiInstance.setInputDataItem("${customExpress.split(\""+users+"\")}");
 			multiInstance.setElementVariable("assignee");
 			//完成数等同于实例数
-			multiInstance.setCompletionCondition("${nrOfInstances == nrOfCompletedInstances}");
+			multiInstance.setCompletionCondition("${pass == false}");
 			userTask.setLoopCharacteristics(multiInstance);
+			countersign(userTask);
 		}
+
 		return userTask;
 	}
+
+
 
 }

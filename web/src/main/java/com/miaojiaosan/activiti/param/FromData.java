@@ -32,6 +32,7 @@ public class FromData extends Approval {
 		userTask.addAttribute(new ExtensionAttribute("activiti:approverIdKey"){{
 			setValue(String.valueOf(approverIdKey));
 		}});
+		noCountersign(userTask);
 		return userTask;
 	}
 }

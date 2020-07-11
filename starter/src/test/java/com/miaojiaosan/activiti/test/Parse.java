@@ -89,7 +89,7 @@ public class Parse {
 //	3、特殊情况节开始条件下直接分支
 		userTasks.forEach(userTask -> {
 
-			String auditGatewayId = UUID.randomUUID().toString();
+			String auditGatewayId = "exculsive"+UUID.randomUUID().toString().replace("-","");
 			auditExclusiveGateway(processNodes, userTask, auditGatewayId, endEventId);
 
 			//找到原来的连线
@@ -116,13 +116,13 @@ public class Parse {
 	 */
 	private static void specialCase(List<ProcessNode> processNodes, List<ProcessNode> startEvents, String startEventId) {
 			ProcessNode exclusiveGateway = new ExclusiveGateway();
-			String nodeKey = UUID.randomUUID().toString();
+			String nodeKey = "exculsive"+UUID.randomUUID().toString().replace("-","");
 			exclusiveGateway.setNodeKey(nodeKey);
 			exclusiveGateway.setName("审批网关");
 			processNodes.add(exclusiveGateway);
 
 			ProcessNode sequenceFlow = new SequenceFlow(){{
-				setNodeKey(UUID.randomUUID().toString());
+				setNodeKey("sequenceFlow"+UUID.randomUUID().toString().replace("-",""));
 				setSourceRef(startEventId);
 				setTargetRef(nodeKey);
 			}};
@@ -137,14 +137,14 @@ public class Parse {
 	 * 条件网关
 	 */
 	private static void conditionGateway(List<ProcessNode> processNodes, String auditGatewayId, List<ProcessNode> sourceSequenceFlows) {
-		String conditionGatewayId = UUID.randomUUID().toString();
+		String conditionGatewayId = "exculsive"+UUID.randomUUID().toString().replace("-","");
 		ProcessNode conditionGateway = new ExclusiveGateway();
 		conditionGateway.setNodeKey(conditionGatewayId);
 		conditionGateway.setName("条件网关");
 		processNodes.add(conditionGateway);
 		//再创建一条线 一端连审批网关 一端连条件网关
 		ProcessNode sequenceFlow = new SequenceFlow(){{
-			setNodeKey(UUID.randomUUID().toString());
+			setNodeKey("sequenceFlow"+UUID.randomUUID().toString().replace("-",""));
 			setSourceRef(auditGatewayId);
 			setTargetRef(conditionGatewayId);
 			setConditionExpression("${result == \"Y\"}");
@@ -167,13 +167,13 @@ public class Parse {
 		processNodes.add(exclusiveGateway);
 		//先创建两条线 一段 userTaskKey, 一段连end
 		ProcessNode sequenceFlow = new SequenceFlow(){{
-			setNodeKey(UUID.randomUUID().toString());
+			setNodeKey("sequenceFlow"+UUID.randomUUID().toString().replace("-",""));
 			setSourceRef(userTask.getNodeKey());
 			setTargetRef(auditGatewayId);
 		}};
 		processNodes.add(sequenceFlow);
 		sequenceFlow = new SequenceFlow(){{
-			setNodeKey(UUID.randomUUID().toString());
+			setNodeKey("sequenceFlow"+UUID.randomUUID().toString().replace("-",""));
 			setSourceRef(auditGatewayId);
 			setTargetRef(endEventId);
 			setConditionExpression("${result == \"N\"}");
