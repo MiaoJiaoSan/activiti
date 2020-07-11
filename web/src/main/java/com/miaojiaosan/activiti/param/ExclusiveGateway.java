@@ -13,12 +13,23 @@ public class ExclusiveGateway extends ProcessNode {
   @JsonIgnore
   org.activiti.bpmn.model.ExclusiveGateway exclusiveGateway;
 
+  String defaultFlow;
+
+  public String getDefaultFlow() {
+    return defaultFlow;
+  }
+
+  public void setDefaultFlow(String defaultFlow) {
+    this.defaultFlow = defaultFlow;
+  }
+
   @Override
   public FlowElement create() {
 
     org.activiti.bpmn.model.ExclusiveGateway exclusiveGateway = new org.activiti.bpmn.model.ExclusiveGateway();
     exclusiveGateway.setId(nodeKey);
     exclusiveGateway.setName(name);
+    exclusiveGateway.setDefaultFlow(defaultFlow);
     this.exclusiveGateway = exclusiveGateway;
     return exclusiveGateway;
   }

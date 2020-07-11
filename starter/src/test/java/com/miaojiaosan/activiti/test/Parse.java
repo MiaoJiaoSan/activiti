@@ -2,18 +2,13 @@ package com.miaojiaosan.activiti.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.miaojiaosan.activiti.param.Definition;
-import com.miaojiaosan.activiti.param.ExclusiveGateway;
-import com.miaojiaosan.activiti.param.ProcessNode;
-import com.miaojiaosan.activiti.param.SequenceFlow;
+import com.miaojiaosan.activiti.param.*;
 import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.Process;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +50,12 @@ public class Parse {
 		});
 		//再创建线节点
 		groupNode = group.get(sequenceFlowGroup);
+		//对线排序
+		groupNode.sort((o1, o2) -> {
+			Integer order1 = Optional.ofNullable(((Order) o1).getOrder()).orElse(9999);
+			Integer order2 = Optional.ofNullable(((Order) o2).getOrder()).orElse(9999);
+			return order1 - order2;
+		});
 		groupNode.forEach(processNode -> {
 			SequenceFlow sequenceFlow = (SequenceFlow) processNode;
 			process.addFlowElement(sequenceFlow.create());
@@ -115,11 +116,11 @@ public class Parse {
 	 * 开始节点直接分支
 	 */
 	private static void specialCase(List<ProcessNode> processNodes, List<ProcessNode> startEvents, String startEventId) {
-			ProcessNode exclusiveGateway = new ExclusiveGateway();
-			String nodeKey = "exculsive"+UUID.randomUUID().toString().replace("-","");
-			exclusiveGateway.setNodeKey(nodeKey);
-			exclusiveGateway.setName("审批网关");
-			processNodes.add(exclusiveGateway);
+		ExclusiveGateway conditionGateway = new ExclusiveGateway();
+		String nodeKey = "exculsive"+UUID.randomUUID().toString().replace("-","");
+		conditionGateway.setNodeKey(nodeKey);
+		conditionGateway.setName("条件网关");
+			processNodes.add(conditionGateway);
 
 			ProcessNode sequenceFlow = new SequenceFlow(){{
 				setNodeKey("sequenceFlow"+UUID.randomUUID().toString().replace("-",""));
@@ -129,6 +130,11 @@ public class Parse {
 			processNodes.add(sequenceFlow);
 			startEvents.forEach(processNode -> {
 				SequenceFlow condition = (SequenceFlow) processNode;
+				Boolean defaultFlow = condition.getDefaultFlow();
+				if(Objects.nonNull(defaultFlow) && defaultFlow){
+					condition.setConditionExpression(null);
+					conditionGateway.setDefaultFlow(condition.getNodeKey());
+				}
 				condition.setSourceRef(nodeKey);
 			});
 	}
@@ -138,7 +144,7 @@ public class Parse {
 	 */
 	private static void conditionGateway(List<ProcessNode> processNodes, String auditGatewayId, List<ProcessNode> sourceSequenceFlows) {
 		String conditionGatewayId = "exculsive"+UUID.randomUUID().toString().replace("-","");
-		ProcessNode conditionGateway = new ExclusiveGateway();
+		ExclusiveGateway conditionGateway = new ExclusiveGateway();
 		conditionGateway.setNodeKey(conditionGatewayId);
 		conditionGateway.setName("条件网关");
 		processNodes.add(conditionGateway);
@@ -153,6 +159,11 @@ public class Parse {
 		//修改原线路为条件网关
 		sourceSequenceFlows.forEach(processNode -> {
 			SequenceFlow conditionSequenceFlow = (SequenceFlow) processNode;
+			Boolean defaultFlow = conditionSequenceFlow.getDefaultFlow();
+			if(Objects.nonNull(defaultFlow) && defaultFlow){
+				conditionSequenceFlow.setConditionExpression(null);
+				conditionGateway.setDefaultFlow(processNode.getNodeKey());
+			}
 			conditionSequenceFlow.setSourceRef(conditionGatewayId);
 		});
 	}

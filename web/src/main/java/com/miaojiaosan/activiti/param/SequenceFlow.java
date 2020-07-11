@@ -10,13 +10,36 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * @author 李宇飞
  * create by 2020-07-08 11:04
  */
-public class SequenceFlow extends ProcessNode {
+public class SequenceFlow extends ProcessNode implements Order {
 
 	String sourceRef;
 	String targetRef;
+	Integer order;
+	/**
+	 * 条件表达式与 default互斥
+	 */
 	String conditionExpression;
+	Boolean defaultFlow;
+
+	@Override
+	public Integer getOrder() {
+		return order;
+	}
+
+	public void setOrder(Integer order) {
+		this.order = order;
+	}
+
 	@JsonIgnore
 	org.activiti.bpmn.model.SequenceFlow sequenceFlow;
+
+	public Boolean getDefaultFlow() {
+		return defaultFlow;
+	}
+
+	public void setDefaultFlow(Boolean defaultFlow) {
+		this.defaultFlow = defaultFlow;
+	}
 
 	public String getSourceRef() {
 		return sourceRef;
