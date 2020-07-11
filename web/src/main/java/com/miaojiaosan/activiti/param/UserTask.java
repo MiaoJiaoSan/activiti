@@ -1,7 +1,10 @@
 package com.miaojiaosan.activiti.param;
 
-import org.activiti.bpmn.model.ActivitiListener;
-import org.springframework.util.CollectionUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.activiti.bpmn.model.FlowElement;
+import org.activiti.bpmn.model.SequenceFlow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,12 +18,12 @@ import java.util.Optional;
  * @author 李宇飞
  * create by 2020-07-08 11:00
  */
-public class UserTask extends Independence  {
+public class UserTask extends ProcessNode {
 
-	/**
-	 * 审批
-	 */
 	Approval approval;
+
+	@JsonIgnore
+	org.activiti.bpmn.model.UserTask userTask;
 
 
 	public Approval getApproval() {
@@ -32,18 +35,27 @@ public class UserTask extends Independence  {
 	}
 
 
+
 	@Override
-	public org.activiti.bpmn.model.UserTask create(ProcessNode processNode) {
-		org.activiti.bpmn.model.UserTask userTask = new org.activiti.bpmn.model.UserTask();
-		userTask.setId(processNode.getNodeKey());
-		userTask.setName(processNode.getName());
-//		ActivitiListener activitiListener = new ActivitiListener();
-//		activitiListener.setEvent("end");
-//		activitiListener.setImplementationType("delegateExpression");
-//		activitiListener.setImplementation("${refuseListener}");
-//		List<ActivitiListener> executionListeners = userTask.getExecutionListeners();
-//		Optional.ofNullable(executionListeners)
-//			.orElse(new ArrayList<>()).add(activitiListener);
-		return approval.create(userTask);
+	public FlowElement create() {
+		org.activiti.bpmn.model.UserTask userTask = approval.create(this);
+		this.userTask = userTask;
+		return userTask;
 	}
+
+	@Override
+	public void setIncomingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow){
+		List<org.activiti.bpmn.model.SequenceFlow> incomingFlows = userTask.getIncomingFlows();
+		Optional.of(incomingFlows).orElse(new ArrayList<>()).add(sequenceFlow);
+		userTask.setIncomingFlows(incomingFlows);
+	}
+
+
+	@Override
+	public void setOutgoingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow){
+		List<SequenceFlow> incomingFlows = userTask.getOutgoingFlows();
+		Optional.of(incomingFlows).orElse(new ArrayList<>()).add(sequenceFlow);
+		userTask.setOutgoingFlows(incomingFlows);
+	}
+
 }

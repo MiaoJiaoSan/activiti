@@ -3,13 +3,18 @@ package com.miaojiaosan.activiti.test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miaojiaosan.activiti.param.Definition;
+import com.miaojiaosan.activiti.param.ExclusiveGateway;
+import com.miaojiaosan.activiti.param.ProcessNode;
+import com.miaojiaosan.activiti.param.SequenceFlow;
 import org.activiti.bpmn.model.BpmnModel;
+import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.Process;
-import org.activiti.validation.ProcessValidator;
-import org.activiti.validation.ProcessValidatorFactory;
-import org.activiti.validation.ValidationError;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * <pre>
@@ -22,243 +27,158 @@ import java.util.List;
 public class Parse {
 
 
-	public static BpmnModel parse() throws JsonProcessingException {
-		String json = "{\n" +
-			"  \"process\": {\n" +
-			"    \"processKey\": \"holiday\",\n" +
-			"    \"name\": \"请假流程\"\n" +
-			"  },\n" +
-			"\n" +
-			"  \"processNodes\": [\n" +
-			"    {\n" +
-			"      \"nodeKey\": \"start\",\n" +
-			"      \"name\": \"开始\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"startEvent\",\n" +
-			"        \"initiator\": 10086\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"_11111\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"start\",\n" +
-			"        \"targetRef\": \"audit\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"audit\",\n" +
-			"      \"name\": \"班主任审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 1,\n" +
-			"          \"countersign\": 1,\n" +
-			"          \"users\":[\n" +
-			"            10086\n" +
-			"          ],\n" +
-			"          \"origins\":[\n" +
-			"            1000010\n" +
-			"          ],\n" +
-			"          \"roles\": [\n" +
-			"            10086\n" +
-			"          ]\n" +
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"_22222\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit\",\n" +
-			"        \"targetRef\": \"audit2\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"audit2\",\n" +
-			"      \"name\": \"教务处主任审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 2,\n" +
-			"          \"level\": 1,\n" +
-			"          \"whenOrgNotExists\": 10086\n" +
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"_3333\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit2\",\n" +
-			"        \"targetRef\": \"audit3\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"audit3\",\n" +
-			"      \"name\": \"校长审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 3,\n" +
-			"          \"approverIdKey\": 100010\n" +
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"_44444\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit3\",\n" +
-			"        \"targetRef\": \"end\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"end\",\n" +
-			"      \"name\": \"结束\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"endEvent\"\n" +
-			"      }\n" +
-			"    }\n" +
-			"  ]\n" +
-			"}";
-
+	public static BpmnModel parse(String json) throws JsonProcessingException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		Definition definition = objectMapper.readValue(json, Definition.class);
 
+		List<ProcessNode> processNodes = definition.getProcessNodes();
+		//前期准备补全数据
+		prepare(processNodes);
+		String noSequenceFlowGroup = "noSequenceFlow";
+		String sequenceFlowGroup = "sequenceFlow";
+		//分组 一组是线 一组非线
+		Map<String, List<ProcessNode>> group = processNodes.stream().collect(Collectors.groupingBy(processNode -> {
+			if (processNode instanceof SequenceFlow) {
+				return sequenceFlowGroup;
+			} else {
+				return noSequenceFlowGroup;
+			}
+		}));
+		List<ProcessNode> groupNode = group.get(noSequenceFlowGroup);
+		Map<String, ProcessNode> noSequenceFlowMap = new HashMap<>(groupNode.size());
+		//先创建非线节点
 		Process process = definition.getProcess().create();
-		definition.getProcessNodes().forEach(processNode -> {
-			process.addFlowElement(processNode.create());
+		groupNode.forEach(processNode -> {
+			FlowElement flowElement = processNode.create();
+			noSequenceFlowMap.put(flowElement.getId(), processNode);
+			process.addFlowElement(flowElement);
+		});
+		//再创建线节点
+		groupNode = group.get(sequenceFlowGroup);
+		groupNode.forEach(processNode -> {
+			SequenceFlow sequenceFlow = (SequenceFlow) processNode;
+			process.addFlowElement(sequenceFlow.create());
+			ProcessNode source = noSequenceFlowMap.get(sequenceFlow.getSourceRef());
+			ProcessNode target = noSequenceFlowMap.get(sequenceFlow.getTargetRef());
+			source.setOutgoingFlows(sequenceFlow.getSequenceFlow());
+			target.setIncomingFlows(sequenceFlow.getSequenceFlow());
 		});
 
 		BpmnModel bpmnModel = new BpmnModel();
-//		bpmnModel.addNamespace("bpmndi","http://www.omg.org/spec/BPMN/20100524/DI");
-//		bpmnModel.addNamespace("dc","http://www.omg.org/spec/DD/20100524/DC");
-//		bpmnModel.addNamespace("di","http://www.omg.org/spec/DD/20100524/DI");
-//		bpmnModel.addNamespace("xsi","http://www.omg.org/spec/BPMN/20100524/DI");
-//		bpmnModel.addNamespace("activiti","http://activiti.org/bpmn");
-//		bpmnModel.addNamespace("camunda","http://camunda.org/schema/1.0/bpmn");
-//		bpmnModel.addNamespace("tns","http://www.activiti.org/testm1574124674914");
-//		bpmnModel.addNamespace("xsd","http://www.w3.org/2001/XMLSchema");
 		bpmnModel.setTargetNamespace("http://www.activiti.org/testm1574124674914");
 		bpmnModel.addProcess(process);
-		ProcessValidatorFactory processValidatorFactory=new ProcessValidatorFactory();
-		ProcessValidator defaultProcessValidator = processValidatorFactory.createDefaultProcessValidator();
-		List<ValidationError> validate = defaultProcessValidator.validate(bpmnModel);
-		assert validate.size() == 0;
 		return bpmnModel;
 	}
 
-	public static BpmnModel parse2() throws JsonProcessingException {
-		String json = "{\n" +
-			"  \"process\": {\n" +
-			"    \"processKey\": \"holiday\",\n" +
-			"    \"name\": \"请假流程\"\n" +
-			"  },\n" +
-			"\n" +
-			"  \"processNodes\": [\n" +
-			"    {\n" +
-			"      \"nodeKey\": \"start\",\n" +
-			"      \"name\": \"开始\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"startEvent\",\n" +
-			"        \"initiator\": 10086\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"_11111\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"start\",\n" +
-			"        \"targetRef\": \"audit\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"audit\",\n" +
-			"      \"name\": \"班主任审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 1,\n" +
-			"          \"countersign\": 2,\n" +
-			"          \"users\":[\n" +
-			"            10086,\n" +
-			"            10010\n" +
-			"          ]"+
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"_22222\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit\",\n" +
-			"        \"targetRef\": \"audit2\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"audit2\",\n" +
-			"      \"name\": \"教务处主任审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 2,\n" +
-			"          \"level\": 1,\n" +
-			"          \"whenOrgNotExists\": 10086\n" +
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"_3333\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit2\",\n" +
-			"        \"targetRef\": \"audit3\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"\n" +
-			"      \"nodeKey\": \"audit3\",\n" +
-			"      \"name\": \"校长审批\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"userTask\",\n" +
-			"        \"approval\": {\n" +
-			"          \"auditType\": 3,\n" +
-			"          \"approverIdKey\": 100010\n" +
-			"        }\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"_44444\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"sequenceFlow\",\n" +
-			"        \"sourceRef\": \"audit3\",\n" +
-			"        \"targetRef\": \"end\"\n" +
-			"      }\n" +
-			"    },{\n" +
-			"      \"nodeKey\": \"end\",\n" +
-			"      \"name\": \"结束\",\n" +
-			"      \"independence\": {\n" +
-			"        \"nodeType\": \"endEvent\"\n" +
-			"      }\n" +
-			"    }\n" +
-			"  ]\n" +
-			"}";
+	private static void prepare(List<ProcessNode> processNodes) {
+		Map<String, List<ProcessNode>> nodeGroup =
+				processNodes.parallelStream().collect(Collectors.groupingBy(ProcessNode::getNodeType));
 
-		ObjectMapper objectMapper = new ObjectMapper();
-		Definition definition = objectMapper.readValue(json, Definition.class);
+		String startEventId = nodeGroup.get("startEvent").get(0).getNodeKey();
+		String endEventId = nodeGroup.get("endEvent").get(0).getNodeKey();
 
-		Process process = definition.getProcess().create();
-		definition.getProcessNodes().forEach(processNode -> {
-			process.addFlowElement(processNode.create());
+		List<ProcessNode> sequenceFlows = nodeGroup.get("sequenceFlow");
+		//再根据 sourceRef 分组 找出所有分支
+		Map<String, List<ProcessNode>> sourceMapping = sequenceFlows.stream().collect(Collectors.groupingBy(processNode -> {
+			SequenceFlow sequenceFlow = (SequenceFlow) processNode;
+			return sequenceFlow.getSourceRef();
+		}));
+		List<ProcessNode> userTasks = nodeGroup.get("userTask");
+//	1、拿到所有的userTask,每个userTask 生成一个网关 与 end连线
+//	2、修改每个user 的 sequenceFlow 变为 userTask-> gateway -> nextNo
+//	3、特殊情况节开始条件下直接分支
+		userTasks.forEach(userTask -> {
+
+			String auditGatewayId = UUID.randomUUID().toString();
+			auditExclusiveGateway(processNodes, userTask, auditGatewayId, endEventId);
+
+			//找到原来的连线
+			List<ProcessNode> sourceSequenceFlows = sourceMapping.get(userTask.getNodeKey());
+			if(sourceSequenceFlows.size() > 1){
+				conditionGateway(processNodes, auditGatewayId, sourceSequenceFlows);
+			}else if(sourceSequenceFlows.size() == 1){
+				//如果没有分支，则直接连审批网关
+				SequenceFlow conditionSequenceFlow = (SequenceFlow) sourceSequenceFlows.get(0);
+				conditionSequenceFlow.setSourceRef(auditGatewayId);
+				conditionSequenceFlow.setConditionExpression("${result == \"Y\"}");
+			}
 		});
 
-		BpmnModel bpmnModel = new BpmnModel();
-//		bpmnModel.addNamespace("bpmndi","http://www.omg.org/spec/BPMN/20100524/DI");
-//		bpmnModel.addNamespace("dc","http://www.omg.org/spec/DD/20100524/DC");
-//		bpmnModel.addNamespace("di","http://www.omg.org/spec/DD/20100524/DI");
-//		bpmnModel.addNamespace("xsi","http://www.omg.org/spec/BPMN/20100524/DI");
-//		bpmnModel.addNamespace("activiti","http://activiti.org/bpmn");
-//		bpmnModel.addNamespace("camunda","http://camunda.org/schema/1.0/bpmn");
-//		bpmnModel.addNamespace("tns","http://www.activiti.org/testm1574124674914");
-//		bpmnModel.addNamespace("xsd","http://www.w3.org/2001/XMLSchema");
-		bpmnModel.setTargetNamespace("http://www.activiti.org/testm1574124674914");
-		bpmnModel.addProcess(process);
-		ProcessValidatorFactory processValidatorFactory=new ProcessValidatorFactory();
-		ProcessValidator defaultProcessValidator = processValidatorFactory.createDefaultProcessValidator();
-		List<ValidationError> validate = defaultProcessValidator.validate(bpmnModel);
-		assert validate.size() == 0;
-		return bpmnModel;
+		//特殊情况 开始节点直接分支
+		List<ProcessNode> startEvents = sourceMapping.get(startEventId);
+		if(startEvents.size() > 1) {
+			specialCase(processNodes, startEvents, startEventId);
+		}
+	}
+
+	/**
+	 * 开始节点直接分支
+	 */
+	private static void specialCase(List<ProcessNode> processNodes, List<ProcessNode> startEvents, String startEventId) {
+			ProcessNode exclusiveGateway = new ExclusiveGateway();
+			String nodeKey = UUID.randomUUID().toString();
+			exclusiveGateway.setNodeKey(nodeKey);
+			exclusiveGateway.setName("审批网关");
+			processNodes.add(exclusiveGateway);
+
+			ProcessNode sequenceFlow = new SequenceFlow(){{
+				setNodeKey(UUID.randomUUID().toString());
+				setSourceRef(startEventId);
+				setTargetRef(nodeKey);
+			}};
+			processNodes.add(sequenceFlow);
+			startEvents.forEach(processNode -> {
+				SequenceFlow condition = (SequenceFlow) processNode;
+				condition.setSourceRef(nodeKey);
+			});
+	}
+
+	/**
+	 * 条件网关
+	 */
+	private static void conditionGateway(List<ProcessNode> processNodes, String auditGatewayId, List<ProcessNode> sourceSequenceFlows) {
+		String conditionGatewayId = UUID.randomUUID().toString();
+		ProcessNode conditionGateway = new ExclusiveGateway();
+		conditionGateway.setNodeKey(conditionGatewayId);
+		conditionGateway.setName("条件网关");
+		processNodes.add(conditionGateway);
+		//再创建一条线 一端连审批网关 一端连条件网关
+		ProcessNode sequenceFlow = new SequenceFlow(){{
+			setNodeKey(UUID.randomUUID().toString());
+			setSourceRef(auditGatewayId);
+			setTargetRef(conditionGatewayId);
+			setConditionExpression("${result == \"Y\"}");
+		}};
+		processNodes.add(sequenceFlow);
+		//修改原线路为条件网关
+		sourceSequenceFlows.forEach(processNode -> {
+			SequenceFlow conditionSequenceFlow = (SequenceFlow) processNode;
+			conditionSequenceFlow.setSourceRef(conditionGatewayId);
+		});
+	}
+
+	/**
+	 * 审批网关
+	 */
+	private static void auditExclusiveGateway(List<ProcessNode> processNodes, ProcessNode userTask, String auditGatewayId, String endEventId) {
+		ProcessNode exclusiveGateway = new ExclusiveGateway();
+		exclusiveGateway.setNodeKey(auditGatewayId);
+		exclusiveGateway.setName("审批网关");
+		processNodes.add(exclusiveGateway);
+		//先创建两条线 一段 userTaskKey, 一段连end
+		ProcessNode sequenceFlow = new SequenceFlow(){{
+			setNodeKey(UUID.randomUUID().toString());
+			setSourceRef(userTask.getNodeKey());
+			setTargetRef(auditGatewayId);
+		}};
+		processNodes.add(sequenceFlow);
+		sequenceFlow = new SequenceFlow(){{
+			setNodeKey(UUID.randomUUID().toString());
+			setSourceRef(auditGatewayId);
+			setTargetRef(endEventId);
+			setConditionExpression("${result == \"N\"}");
+		}};
+		processNodes.add(sequenceFlow);
 	}
 }
 

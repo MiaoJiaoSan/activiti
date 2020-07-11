@@ -1,5 +1,7 @@
 package com.miaojiaosan.activiti.param;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * <pre>
  *
@@ -8,10 +10,13 @@ package com.miaojiaosan.activiti.param;
  * @author 李宇飞
  * create by 2020-07-08 11:04
  */
-public class SequenceFlow extends Independence {
+public class SequenceFlow extends ProcessNode {
 
 	String sourceRef;
 	String targetRef;
+	String conditionExpression;
+	@JsonIgnore
+	org.activiti.bpmn.model.SequenceFlow sequenceFlow;
 
 	public String getSourceRef() {
 		return sourceRef;
@@ -29,13 +34,41 @@ public class SequenceFlow extends Independence {
 		this.targetRef = targetRef;
 	}
 
+	public String getConditionExpression() {
+		return conditionExpression;
+	}
+
+	public void setConditionExpression(String conditionExpression) {
+		this.conditionExpression = conditionExpression;
+	}
+
+	public org.activiti.bpmn.model.SequenceFlow getSequenceFlow() {
+		return sequenceFlow;
+	}
+
+	public void setSequenceFlow(org.activiti.bpmn.model.SequenceFlow sequenceFlow) {
+		this.sequenceFlow = sequenceFlow;
+	}
+
 	@Override
-	public org.activiti.bpmn.model.SequenceFlow create(ProcessNode processNode) {
+	public org.activiti.bpmn.model.SequenceFlow create() {
 		org.activiti.bpmn.model.SequenceFlow sequenceFlow = new org.activiti.bpmn.model.SequenceFlow();
-		sequenceFlow.setId(processNode.nodeKey);
-		sequenceFlow.setName(processNode.name);
+		sequenceFlow.setId(nodeKey);
+		sequenceFlow.setName(name);
 		sequenceFlow.setTargetRef(targetRef);
 		sequenceFlow.setSourceRef(sourceRef);
+		sequenceFlow.setConditionExpression(conditionExpression);
+		this.sequenceFlow = sequenceFlow;
 		return sequenceFlow;
+	}
+
+	@Override
+	public void setIncomingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow) {
+
+	}
+
+	@Override
+	public void setOutgoingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow) {
+
 	}
 }

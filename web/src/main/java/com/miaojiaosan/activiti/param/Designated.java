@@ -1,11 +1,14 @@
 package com.miaojiaosan.activiti.param;
 
+import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.MultiInstanceLoopCharacteristics;
 import org.activiti.bpmn.model.UserTask;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +28,7 @@ public class Designated extends Approval {
 	List<Long> users;
 	List<Long> organizations;
 	List<Long> roles;
+
 
 	public Integer getCountersign() {
 		return countersign;
@@ -59,7 +63,7 @@ public class Designated extends Approval {
 	}
 
 	@Override
-	public UserTask create(UserTask userTask) {
+	public org.activiti.bpmn.model.UserTask create(UserTask userTask) {
 		//角色或分组不为空不能 设置会签
 		if(
 			(!CollectionUtils.isEmpty(organizations)
@@ -96,4 +100,5 @@ public class Designated extends Approval {
 		}
 		return userTask;
 	}
+
 }

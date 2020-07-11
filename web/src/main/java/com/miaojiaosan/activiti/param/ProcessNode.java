@@ -1,6 +1,13 @@
 package com.miaojiaosan.activiti.param;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.activiti.bpmn.model.FlowElement;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * <pre>
@@ -10,13 +17,23 @@ import org.activiti.bpmn.model.FlowElement;
  * @author 李宇飞
  * create by 2020-07-08 10:57
  */
-public class ProcessNode {
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "nodeType", visible = true)
+@JsonSubTypes({
+		@JsonSubTypes.Type(value = StartEvent.class, name = "startEvent"),
+		@JsonSubTypes.Type(value = UserTask.class, name = "userTask"),
+		@JsonSubTypes.Type(value = EndEvent.class, name = "endEvent"),
+		@JsonSubTypes.Type(value = SequenceFlow.class, name = "sequenceFlow"),
+		@JsonSubTypes.Type(value = ExclusiveGateway.class, name = "exclusiveGateway")
+})
+public abstract class ProcessNode {
+
+
 	String nodeKey;
 	String name;
 	/**
-	 * 独立属性
+	 * 节点类型
 	 */
-	Independence independence;
+	String nodeType;
 
 	public String getNodeKey() {
 		return nodeKey;
@@ -34,17 +51,20 @@ public class ProcessNode {
 		this.name = name;
 	}
 
-	public Independence getIndependence() {
-		return independence;
+	public String getNodeType() {
+		return nodeType;
 	}
 
-	public void setIndependence(Independence independence) {
-		this.independence = independence;
+	public void setNodeType(String nodeType) {
+		this.nodeType = nodeType;
 	}
 
-	public FlowElement create(){
-		return independence.create(this);
-	}
+	public abstract FlowElement create();
+
+	public abstract void setIncomingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow);
+
+
+	public abstract void setOutgoingFlows(org.activiti.bpmn.model.SequenceFlow sequenceFlow);
 
 
 }

@@ -27,7 +27,7 @@ public class FromData extends Approval {
 	}
 
 	@Override
-	public UserTask create(UserTask userTask) {
+	public org.activiti.bpmn.model.UserTask create(UserTask userTask) {
 		userTask.setAssignee("${assignee}");
 		userTask.addAttribute(new ExtensionAttribute("activiti:approverIdKey"){{
 			setValue(String.valueOf(approverIdKey));

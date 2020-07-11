@@ -1,5 +1,6 @@
 package com.miaojiaosan.activiti.param;
 
+
 import org.activiti.bpmn.model.UserTask;
 
 /**
@@ -38,7 +39,7 @@ public class OrganizationManager extends Approval {
 	}
 
 	@Override
-	public UserTask create(UserTask userTask) {
+	public org.activiti.bpmn.model.UserTask create(UserTask userTask) {
 		userTask.setAssignee(
 			"${customExpress.leader(startUser, " + this.level + "," + this.whenOrgNotExists + ")}"
 		);
