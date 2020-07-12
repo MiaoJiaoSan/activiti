@@ -17,22 +17,12 @@ import java.util.Optional;
  */
 public class StartEvent extends ProcessNode {
 
-	/**
-	 * 开始事件节点创建人
-	 */
-	Long initiator;
+
 
 	@JsonIgnore
 	org.activiti.bpmn.model.StartEvent startEvent;
 
 
-	public Long getInitiator() {
-		return initiator;
-	}
-
-	public void setInitiator(Long initiator) {
-		this.initiator = initiator;
-	}
 
 	@Override
 	public org.activiti.bpmn.model.StartEvent create() {
@@ -40,7 +30,7 @@ public class StartEvent extends ProcessNode {
 		startEvent.setId(nodeKey);
 		startEvent.setName(name);
 		//判断
-		startEvent.setInitiator(String.valueOf(initiator));
+		startEvent.setInitiator("startUser");
 		this.startEvent = startEvent;
 		return startEvent;
 	}

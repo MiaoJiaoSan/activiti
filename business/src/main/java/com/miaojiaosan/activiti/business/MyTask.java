@@ -6,9 +6,11 @@ import org.activiti.engine.task.Task;
 import org.activiti.engine.task.TaskQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -16,10 +18,10 @@ import java.util.stream.Collectors;
 public class MyTask {
 
   @Autowired
-  private TaskService task;
+  private TaskService taskService;
 
   public List<Map<String, Object>> list(String assignee) throws ExecutionException, InterruptedException {
-    TaskQuery taskQuery = task.createTaskQuery();
+    TaskQuery taskQuery = taskService.createTaskQuery();
     taskQuery.taskTenantId("3521");
 
     taskQuery.taskCandidateUser(assignee);
@@ -38,19 +40,32 @@ public class MyTask {
     }}).collect(Collectors.toList());
   }
 
-  public Boolean claim(String taskId,String assignee){
-    task.claim(taskId, assignee);
+  public Boolean claim(String taskId, String assignee) {
+    taskService.claim(taskId, assignee);
     return true;
   }
 
 
-  public Boolean complete(CompleteDTO dto){
-    task.setAssignee(dto.getTaskId(),dto.getAssignee());
-    task.complete(dto.getTaskId()/*,new HashMap<String, Object>(1) {{
+  public Boolean complete(CompleteDTO dto) {
+    taskService.setAssignee(dto.getTaskId(), dto.getAssignee());
+    taskService.complete(dto.getTaskId()/*,new HashMap<String, Object>(1) {{
       put("day", 4);
       put("assigneeList", Arrays.asList("lisi","wangwu","zhaoliu"));
     }}*/);
     return true;
+  }
+
+  @Transactional(rollbackFor = Exception.class)
+  public void complete(String instanceId, String userId, boolean pass) {
+    Task task = taskService.createTaskQuery().processInstanceId(instanceId).taskCandidateOrAssigned(userId).singleResult();
+    if (Objects.isNull(task)) {
+      return;
+    }
+    taskService.claim(task.getId(), userId);
+    taskService.removeVariable(task.getId(), "result");
+    taskService.setVariable(task.getId(), "pass", pass);
+    taskService.complete(task.getId());
+
   }
 
 }
